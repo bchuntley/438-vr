@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TRON VR</title>
+    <link rel="stylesheet" href="index.css" type="text/css" />
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <!-- JQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!-- SystemJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/0.21.3/system.js"></script>
+    <script>
+    SystemJS.config({
+        map: {
+            babylonjs: "https://cdnjs.cloudflare.com/ajax/libs/babylonjs/2.5.0/babylon.max.js"
+        }
+    });
+    SystemJS.import("index.js");
+    </script>
+</body>
+</html>

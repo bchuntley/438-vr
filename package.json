@@ -1,0 +1,22 @@
+{
+  "name": "tron-vr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bchuntley/438-vr.git"
+  },
+  "contributors": [
+    "Alex Hicks <alex@alexhicks.net> (https://alexhicks.net)",
+    "Brian Huntley"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bchuntley/438-vr/issues"
+  },
+  "homepage": "https://github.com/bchuntley/438-vr#readme",
+  "dependencies": {
+    "babylonjs": "^3.2.0-rc.2"
+  }
+}

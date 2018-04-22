@@ -4,7 +4,7 @@
     "module": "system",
     "sourceMap": true,
     "strict": true,
-    "moduleResolution": "classic",
+    "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
