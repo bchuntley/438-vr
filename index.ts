@@ -1,8 +1,16 @@
 import BABYLON from "babylonjs";
 
+enum GameKey {
+    Back, // S on PC
+    Forward, // right Oculus trigger, W on PC
+    Left, // A on PC
+    Right, // D on PC
+}
+
 class Game {
     canvas: HTMLCanvasElement;
     engine: BABYLON.Engine;
+    keysPressed: Set<GameKey> = new Set();
     scene: BABYLON.Scene;
     vr: BABYLON.VRExperienceHelper;
     player: BABYLON.Mesh;
@@ -10,8 +18,6 @@ class Game {
     get controllers(): BABYLON.OculusTouchController[] {
         return <any>this.vr.webVRCamera.controllers;
     }
-
-    isRightTriggerPressed = false;
 
     constructor() {
         this.canvas = <HTMLCanvasElement>document.getElementById("canvas");
@@ -23,9 +29,8 @@ class Game {
         });
         this.vr.enableInteractions();
         this.vr.webVRCamera.onControllersAttachedObservable.add(controllers => {
-            console.log(controllers);
             this.controllers[1].onTriggerStateChangedObservable.add(evt => {
-                this.isRightTriggerPressed = evt.pressed;
+                this.keysPressed[evt.pressed ? "add" : "delete"](GameKey.Forward);
             });
         });
         new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), this.scene);
@@ -39,14 +44,34 @@ class Game {
 
     start() {
         this.engine.runRenderLoop(() => this.scene.render());
-        window.addEventListener("resize", () => this.engine.resize());
+        $(window).on("keydown keyup", evt => {
+            const gameKey = this.convertKey(evt.which);
+            if (gameKey === undefined) return;
+            this.keysPressed[evt.type === "keydown" ? "add" : "delete"](gameKey);
+        }).on("resize", () => this.engine.resize());
     }
 
     beforeRender() {
-        if (this.controllers.length === 0) return;
-        // left is negative z, right is positive z
-        if (this.isRightTriggerPressed) {
-            this.player.position.addInPlace(new BABYLON.Vector3(0, 0, this.controllers[1].deviceRotationQuaternion.z / 10));
+        const positionDiff = BABYLON.Vector3.Zero();
+        if (this.keysPressed.has(GameKey.Forward)) {
+            const velocity = this.vr.isInVRMode
+                ? this.controllers[1].deviceRotationQuaternion.z / 10
+                : 0.05;
+            positionDiff.z += velocity;
+        }
+        if (this.keysPressed.has(GameKey.Back)) positionDiff.z -= 0.05;
+        if (this.keysPressed.has(GameKey.Left)) this.player.rotation.z += 0.025;
+        if (this.keysPressed.has(GameKey.Right)) this.player.rotation.z -= 0.025;
+        this.player.position.addInPlace(positionDiff);
+    }
+
+    convertKey(key: JQuery.Key): GameKey | undefined {
+        switch (key) {
+            case JQuery.Key.W: return GameKey.Forward;
+            case JQuery.Key.S: return GameKey.Back;
+            case JQuery.Key.A: return GameKey.Left;
+            case JQuery.Key.D: return GameKey.Right;
+            default: return undefined;
         }
     }
 }
