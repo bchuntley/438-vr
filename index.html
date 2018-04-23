@@ -13,9 +13,11 @@
     <script>
     SystemJS.config({
         map: {
-            babylonjs: "https://cdnjs.cloudflare.com/ajax/libs/babylonjs/2.5.0/babylon.max.js"
+            BABYLON: "https://cdn.jsdelivr.net/npm/babylonjs@3.1.1/dist/preview%20release/babylon.max.js",
+            babylonjs: "https://cdn.jsdelivr.net/npm/babylonjs@3.1.1/dist/preview%20release/babylon.max.js"
         }
     });
+    // SystemJS.import("babylonjs").then(() => SystemJS.import("index.js"));
     SystemJS.import("index.js");
     </script>
 </body>

@@ -18,5 +18,8 @@
   "homepage": "https://github.com/bchuntley/438-vr#readme",
   "dependencies": {
     "babylonjs": "^3.2.0-rc.2"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.3.1"
   }
 }
