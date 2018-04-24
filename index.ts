@@ -7,11 +7,14 @@ enum GameKey {
     Right, // D on PC
 }
 
+const MAXIMUM_ROTATION = Math.PI / 6;
+
 class Game {
     canvas: HTMLCanvasElement;
     engine: BABYLON.Engine;
     keysPressed: Set<GameKey> = new Set();
     scene: BABYLON.Scene;
+    velocity: number;
     vr: BABYLON.VRExperienceHelper;
     player: BABYLON.Mesh;
 
@@ -35,11 +38,13 @@ class Game {
         });
         new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), this.scene);
         this.player = BABYLON.MeshBuilder.CreateBox("player", {
-            width: 0.75,
-            height: 0.5,
+            width: 0.5,
+            height: 1,
             depth: 2
         }, this.scene);
+        this.player.setPivotPoint(new BABYLON.Vector3(0, 0, 1));
         this.player.position = new BABYLON.Vector3(1, 1, 3);
+        this.velocity = 0;
     }
 
     start() {
@@ -52,17 +57,19 @@ class Game {
     }
 
     beforeRender() {
-        const positionDiff = BABYLON.Vector3.Zero();
         if (this.keysPressed.has(GameKey.Forward)) {
             const velocity = this.vr.isInVRMode
                 ? this.controllers[1].deviceRotationQuaternion.z / 10
-                : 0.05;
-            positionDiff.z += velocity;
+                : 0.005;
+            this.velocity += velocity;
         }
-        if (this.keysPressed.has(GameKey.Back)) positionDiff.z -= 0.05;
-        if (this.keysPressed.has(GameKey.Left)) this.player.rotation.z += 0.025;
-        if (this.keysPressed.has(GameKey.Right)) this.player.rotation.z -= 0.025;
-        this.player.position.addInPlace(positionDiff);
+        if (this.keysPressed.has(GameKey.Back)) this.velocity -= 0.005;
+        if (this.keysPressed.has(GameKey.Left)) this.rotate("left");
+        if (this.keysPressed.has(GameKey.Right)) this.rotate("right");
+        const oldY = this.player.position.y;
+        this.player.translate(BABYLON.Axis.Z, this.velocity);
+        this.player.position.y = oldY;
+        this.velocity = toZero(this.velocity);
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
@@ -74,6 +81,20 @@ class Game {
             default: return undefined;
         }
     }
+
+    rotate(direction: "left" | "right") {
+        const directionComponent = direction === "left" ? 1 : -1;
+        this.player.rotation.addInPlace(new BABYLON.Vector3(0,
+            0.025 * -directionComponent / 2,
+            0.025 * directionComponent
+        ));
+        this.player.rotation.z = Math.max(-MAXIMUM_ROTATION, Math.min(MAXIMUM_ROTATION, this.player.rotation.z));
+    }
+}
+
+function toZero(value: number, threshold = 0.001) {
+    if (Math.abs(value) <= threshold) return value;
+    return value + (threshold * (value > 0 ? -1 : 1));
 }
 
 $(document).ready(() => {
