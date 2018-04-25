@@ -58,12 +58,11 @@ class Game {
 
     beforeRender() {
         if (this.keysPressed.has(GameKey.Forward)) {
-            const velocity = this.vr.isInVRMode
-                ? this.controllers[1].deviceRotationQuaternion.z / 10
-                : 0.005;
-            this.velocity += velocity;
+            this.velocity = Math.max(0, this.velocity + (this.vr.isInVRMode
+                ? this.controllers[1].deviceRotationQuaternion.z / 100
+                : 0.005));
         }
-        if (this.keysPressed.has(GameKey.Back)) this.velocity -= 0.005;
+        if (this.keysPressed.has(GameKey.Back)) this.velocity = Math.max(0, this.velocity - 0.0025);
         if (this.keysPressed.has(GameKey.Left)) this.rotate("left");
         if (this.keysPressed.has(GameKey.Right)) this.rotate("right");
         const oldY = this.player.position.y;
