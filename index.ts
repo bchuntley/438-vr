@@ -1,4 +1,6 @@
+/// <reference path="./node_modules/babylonjs-gui/babylon.gui.d.ts"/>
 import BABYLON from "babylonjs";
+import "babylonjs-gui";
 
 enum GameKey {
     Back, // S on PC
@@ -8,10 +10,18 @@ enum GameKey {
 }
 
 const MAXIMUM_ROTATION = Math.PI / 6;
+const ROTATION_PRECISION = 25;
+const ROTATION_SENSITIVITY = 0.1;
 
 class Game {
     canvas: HTMLCanvasElement;
     engine: BABYLON.Engine;
+    ground: BABYLON.Mesh;
+    hud: {
+        texture?: BABYLON.GUI.AdvancedDynamicTexture;
+        mesh?: BABYLON.Mesh;
+        velocity?: BABYLON.GUI.TextBlock;
+    } = {};
     keysPressed: Set<GameKey> = new Set();
     scene: BABYLON.Scene;
     velocity = 0;
@@ -40,10 +50,24 @@ class Game {
         this.player = BABYLON.MeshBuilder.CreateBox("player", {
             width: 0.5,
             height: 1,
-            depth: 2
+            depth: 2,
+            faceColors: [0, 0, 0, 0, 0, 0].map(() => new BABYLON.Color4(0, 1, 0, 1))
         }, this.scene);
         this.player.setPivotPoint(new BABYLON.Vector3(0, 0, 1));
         this.player.position = new BABYLON.Vector3(1, 1, 3);
+        this.ground = BABYLON.MeshBuilder.CreateGround("ground", {
+            width: 16,
+            height: 16
+        }, this.scene);
+        this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
+            size: 2
+        }, this.scene);
+        this.hud.mesh.parent = this.player;
+        this.hud.mesh.position.addInPlace(new BABYLON.Vector3(0, 1, 1));
+        this.hud.texture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(this.hud.mesh);
+        this.hud.velocity = new BABYLON.GUI.TextBlock("hud.velocity", "Velocity: 0");
+        this.hud.velocity.color = "white";
+        this.hud.texture.addControl(this.hud.velocity);
     }
 
     start() {
@@ -61,11 +85,11 @@ class Game {
                 this.velocity = Math.max(0, this.velocity + this.controllers[1].deviceRotationQuaternion.z / 100);
             }
             if (this.controllers.length > 0) {
-                const [heightLeft, heightRight] = this.controllers.map(c => Math.trunc(c.devicePosition.y * 50) / 50);
+                const [heightLeft, heightRight] = this.controllers.map(c => Math.trunc(c.devicePosition.y * ROTATION_PRECISION) / ROTATION_PRECISION);
                 if (heightLeft !== heightRight) {
                     const amount = Math.abs(heightRight - heightLeft);
                     const directionComponent = heightRight > heightLeft ? 1 : -1;
-                    this.player.rotation.y += amount * -directionComponent / 8;
+                    this.player.rotation.y += amount * -directionComponent * ROTATION_SENSITIVITY;
                     this.player.rotation.z = amount * directionComponent;
                     this.fixRotation();
                 }
@@ -79,8 +103,14 @@ class Game {
         const oldY = this.player.position.y;
         this.player.translate(BABYLON.Axis.Z, this.velocity);
         this.player.position.y = oldY;
+        this.vr.webVRCamera.position = this.player.position.clone().add(new BABYLON.Vector3(
+            -1 * Math.sin(this.player.rotation.y),
+            1,
+            -1 * Math.cos(this.player.rotation.y)
+        ));
         // decelerate due to friction
         this.velocity = toZero(this.velocity, 0.001);
+        this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)}`;
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
