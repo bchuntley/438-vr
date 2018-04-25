@@ -1,6 +1,7 @@
 /// <reference path="./node_modules/babylonjs-gui/babylon.gui.d.ts"/>
 import BABYLON from "babylonjs";
 import "babylonjs-gui";
+import "babylonjs-loaders";
 
 enum GameKey {
     Back, // S on PC
@@ -10,6 +11,7 @@ enum GameKey {
 }
 
 const MAXIMUM_ROTATION = Math.PI / 6;
+const PLAYER_SEAT_OFFSET = 1;
 const ROTATION_PRECISION = 25;
 const ROTATION_SENSITIVITY = 0.1;
 
@@ -26,7 +28,7 @@ class Game {
     scene: BABYLON.Scene;
     velocity = 0;
     vr: BABYLON.VRExperienceHelper;
-    player: BABYLON.Mesh;
+    player: BABYLON.AbstractMesh;
 
     get controllers(): BABYLON.OculusTouchController[] {
         return <any>this.vr.webVRCamera.controllers;
@@ -35,6 +37,7 @@ class Game {
     constructor() {
         this.canvas = <HTMLCanvasElement>document.getElementById("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
+        this.engine.enableOfflineSupport = false;
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.onBeforeRenderObservable.add(this.beforeRender.bind(this));
         this.vr = this.scene.createDefaultVRExperience({
@@ -46,27 +49,31 @@ class Game {
                 this.keysPressed[evt.pressed ? "add" : "delete"](GameKey.Forward);
             });
         });
+    }
+
+    async init() {
         new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), this.scene);
-        this.player = BABYLON.MeshBuilder.CreateBox("player", {
-            width: 0.5,
-            height: 1,
-            depth: 2,
-            faceColors: [0, 0, 0, 0, 0, 0].map(() => new BABYLON.Color4(0, 1, 0, 1))
-        }, this.scene);
-        this.player.setPivotPoint(new BABYLON.Vector3(0, 0, 1));
-        this.player.position = new BABYLON.Vector3(1, 1, 3);
+        const [playerMeshes, enemyMeshes] = await Promise.all([
+            this.importMesh("Cube", "models/", "player.babylon"),
+            this.importMesh("enemy", "models/", "enemy.babylon")
+        ]);
+        this.player = playerMeshes[0];
+        // this.player.setPivotPoint(new BABYLON.Vector3(0, 0, 1));
+        this.player.position = new BABYLON.Vector3(0, 1, 0);
         this.ground = BABYLON.MeshBuilder.CreateGround("ground", {
-            width: 16,
-            height: 16
+            width: 128,
+            height: 128
         }, this.scene);
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.scene);
+        this.hud.mesh.rotate(BABYLON.Axis.Y, Math.PI / 4);
         this.hud.mesh.parent = this.player;
-        this.hud.mesh.position.addInPlace(new BABYLON.Vector3(0, 1, 1));
+        this.hud.mesh.position.addInPlace(new BABYLON.Vector3(2.5, 1.25, 0.5));
         this.hud.texture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(this.hud.mesh);
         this.hud.velocity = new BABYLON.GUI.TextBlock("hud.velocity", "Velocity: 0");
-        this.hud.velocity.color = "white";
+        this.hud.velocity.color = "orange";
+        this.hud.velocity.fontSize = "36px";
         this.hud.texture.addControl(this.hud.velocity);
     }
 
@@ -82,7 +89,7 @@ class Game {
     beforeRender() {
         if (this.vr.isInVRMode) {
             if (this.keysPressed.has(GameKey.Forward)) {
-                this.velocity = Math.max(0, this.velocity + this.controllers[1].deviceRotationQuaternion.z / 100);
+                this.velocity = Math.max(0, this.velocity + this.controllers[1].deviceRotationQuaternion.toEulerAngles().z / 100);
             }
             if (this.controllers.length > 0) {
                 const [heightLeft, heightRight] = this.controllers.map(c => Math.trunc(c.devicePosition.y * ROTATION_PRECISION) / ROTATION_PRECISION);
@@ -90,7 +97,7 @@ class Game {
                     const amount = Math.abs(heightRight - heightLeft);
                     const directionComponent = heightRight > heightLeft ? 1 : -1;
                     this.player.rotation.y += amount * -directionComponent * ROTATION_SENSITIVITY;
-                    this.player.rotation.z = amount * directionComponent;
+                    this.player.rotation.x = amount * directionComponent;
                     this.fixRotation();
                 }
             }
@@ -101,12 +108,13 @@ class Game {
             if (this.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
         }
         const oldY = this.player.position.y;
-        this.player.translate(BABYLON.Axis.Z, this.velocity);
+        this.player.translate(BABYLON.Axis.X, this.velocity);
         this.player.position.y = oldY;
-        this.vr.webVRCamera.position = this.player.position.clone().add(new BABYLON.Vector3(
-            -1 * Math.sin(this.player.rotation.y),
-            1,
-            -1 * Math.cos(this.player.rotation.y)
+        // x2 = - ( r * D - x1 )
+        this.vr.webVRCamera.position = this.player.position.add(new BABYLON.Vector3(
+            Math.cos(-this.player.rotation.y) * -PLAYER_SEAT_OFFSET,
+            2,
+            Math.sin(-this.player.rotation.y) * -PLAYER_SEAT_OFFSET
         ));
         // decelerate due to friction
         this.velocity = toZero(this.velocity, 0.001);
@@ -125,16 +133,24 @@ class Game {
 
     rotate(direction: "left" | "right", amount: number) {
         const directionComponent = direction === "left" ? 1 : -1;
-        this.player.rotation.addInPlace(new BABYLON.Vector3(0,
+        this.player.rotation.addInPlace(new BABYLON.Vector3(amount * directionComponent,
             amount * -directionComponent / 2,
-            amount * directionComponent
+            0
         ));
         this.fixRotation();
     }
 
     fixRotation() {
         // avoid tipping over
-        this.player.rotation.z = Math.max(-MAXIMUM_ROTATION, Math.min(MAXIMUM_ROTATION, this.player.rotation.z));
+        this.player.rotation.x = Math.max(-MAXIMUM_ROTATION, Math.min(MAXIMUM_ROTATION, this.player.rotation.x));
+    }
+
+    importMesh(name: string, dir: string, filename: string): Promise<BABYLON.AbstractMesh[]> {
+        return new Promise(resolve => {
+            BABYLON.SceneLoader.ImportMesh(name, dir, filename, this.scene, meshes => {
+                resolve(meshes);
+            });
+        });
     }
 }
 
@@ -146,5 +162,6 @@ function toZero(value: number, threshold: number) {
 $(document).ready(() => {
     const game = new Game();
     (<any>window).game = game;
-    game.start();
+    game.init().then(() => game.start())
+        .catch(console.error);
 });
