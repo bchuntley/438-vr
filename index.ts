@@ -14,7 +14,7 @@ class Game {
     engine: BABYLON.Engine;
     keysPressed: Set<GameKey> = new Set();
     scene: BABYLON.Scene;
-    velocity: number;
+    velocity = 0;
     vr: BABYLON.VRExperienceHelper;
     player: BABYLON.Mesh;
 
@@ -28,7 +28,7 @@ class Game {
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.onBeforeRenderObservable.add(this.beforeRender.bind(this));
         this.vr = this.scene.createDefaultVRExperience({
-            controllerMeshes: false
+            controllerMeshes: true
         });
         this.vr.enableInteractions();
         this.vr.webVRCamera.onControllersAttachedObservable.add(controllers => {
@@ -44,7 +44,6 @@ class Game {
         }, this.scene);
         this.player.setPivotPoint(new BABYLON.Vector3(0, 0, 1));
         this.player.position = new BABYLON.Vector3(1, 1, 3);
-        this.velocity = 0;
     }
 
     start() {
@@ -57,18 +56,31 @@ class Game {
     }
 
     beforeRender() {
-        if (this.keysPressed.has(GameKey.Forward)) {
-            this.velocity = Math.max(0, this.velocity + (this.vr.isInVRMode
-                ? this.controllers[1].deviceRotationQuaternion.z / 100
-                : 0.005));
+        if (this.vr.isInVRMode) {
+            if (this.keysPressed.has(GameKey.Forward)) {
+                this.velocity = Math.max(0, this.velocity + this.controllers[1].deviceRotationQuaternion.z / 100);
+            }
+            if (this.controllers.length > 0) {
+                const [heightLeft, heightRight] = this.controllers.map(c => Math.trunc(c.devicePosition.y * 50) / 50);
+                if (heightLeft !== heightRight) {
+                    const amount = Math.abs(heightRight - heightLeft);
+                    const directionComponent = heightRight > heightLeft ? 1 : -1;
+                    this.player.rotation.y += amount * -directionComponent / 8;
+                    this.player.rotation.z = amount * directionComponent;
+                    this.fixRotation();
+                }
+            }
+        } else { // normal PC controls
+            if (this.keysPressed.has(GameKey.Forward)) this.velocity += 0.005;
+            if (this.keysPressed.has(GameKey.Back)) this.velocity = Math.max(0, this.velocity - 0.005);
+            if (this.keysPressed.has(GameKey.Left)) this.rotate("left", 0.025);
+            if (this.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
         }
-        if (this.keysPressed.has(GameKey.Back)) this.velocity = Math.max(0, this.velocity - 0.0025);
-        if (this.keysPressed.has(GameKey.Left)) this.rotate("left");
-        if (this.keysPressed.has(GameKey.Right)) this.rotate("right");
         const oldY = this.player.position.y;
         this.player.translate(BABYLON.Axis.Z, this.velocity);
         this.player.position.y = oldY;
-        this.velocity = toZero(this.velocity);
+        // decelerate due to friction
+        this.velocity = toZero(this.velocity, 0.001);
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
@@ -81,17 +93,22 @@ class Game {
         }
     }
 
-    rotate(direction: "left" | "right") {
+    rotate(direction: "left" | "right", amount: number) {
         const directionComponent = direction === "left" ? 1 : -1;
         this.player.rotation.addInPlace(new BABYLON.Vector3(0,
-            0.025 * -directionComponent / 2,
-            0.025 * directionComponent
+            amount * -directionComponent / 2,
+            amount * directionComponent
         ));
+        this.fixRotation();
+    }
+
+    fixRotation() {
+        // avoid tipping over
         this.player.rotation.z = Math.max(-MAXIMUM_ROTATION, Math.min(MAXIMUM_ROTATION, this.player.rotation.z));
     }
 }
 
-function toZero(value: number, threshold = 0.001) {
+function toZero(value: number, threshold: number) {
     if (Math.abs(value) <= threshold) return value;
     return value + (threshold * (value > 0 ? -1 : 1));
 }
