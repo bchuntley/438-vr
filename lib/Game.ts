@@ -1,6 +1,8 @@
 /// <reference path="../node_modules/babylonjs-gui/babylon.gui.d.ts"/>
 import Constants from "./Constants";
+import Enemy from "./Enemy";
 import GameKey from "./GameKey";
+import Player from "./Player";
 import Utils from "./Utils";
 import BABYLON from "babylonjs";
 import "babylonjs-gui";
@@ -8,19 +10,12 @@ import "babylonjs-loaders";
 
 export default class Game {
     canvas: HTMLCanvasElement;
-    enemy: BABYLON.AbstractMesh;
     engine: BABYLON.Engine;
     ground: BABYLON.Mesh;
-    hud: {
-        texture?: BABYLON.GUI.AdvancedDynamicTexture;
-        mesh?: BABYLON.Mesh;
-        velocity?: BABYLON.GUI.TextBlock;
-    } = {};
     keysPressed: Set<GameKey> = new Set();
     scene: BABYLON.Scene;
-    velocity = 0;
     vr: BABYLON.VRExperienceHelper;
-    player: BABYLON.AbstractMesh;
+    player: Player;
 
     get controllers(): BABYLON.OculusTouchController[] {
         return <any>this.vr.webVRCamera.controllers;
@@ -49,25 +44,14 @@ export default class Game {
             this.importMesh("Cube", "models/", "player.babylon"),
             this.importMesh("Enemy", "models/", "enemy.babylon")
         ]);
-        this.player = playerMeshes[0];
-        this.enemy = enemyMeshes[0];
-        this.player.position = new BABYLON.Vector3(0, 1, 0);
-        this.enemy.position = new BABYLON.Vector3(-3, 1, -3);
+        this.player = new Player(this, playerMeshes[0]);
+        this.player.mesh.position = new BABYLON.Vector3(0, 1, 0);
+        Enemy.baseMesh = enemyMeshes[0];
+        Enemy.baseMesh.isVisible = false;
         this.ground = BABYLON.MeshBuilder.CreateGround("ground", {
             width: 128,
             height: 128
         }, this.scene);
-        this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
-            size: 2
-        }, this.scene);
-        this.hud.mesh.rotate(BABYLON.Axis.Y, Math.PI / 4);
-        this.hud.mesh.parent = this.player;
-        this.hud.mesh.position.addInPlace(new BABYLON.Vector3(2.5, 1.25, 0.5));
-        this.hud.texture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(this.hud.mesh);
-        this.hud.velocity = new BABYLON.GUI.TextBlock("hud.velocity", "Velocity: 0");
-        this.hud.velocity.color = "orange";
-        this.hud.velocity.fontSize = "36px";
-        this.hud.texture.addControl(this.hud.velocity);
     }
 
     start() {
@@ -80,37 +64,7 @@ export default class Game {
     }
 
     beforeRender() {
-        if (this.vr.isInVRMode) {
-            if (this.keysPressed.has(GameKey.Forward)) {
-                this.velocity = Math.max(0, this.velocity + this.controllers[1].deviceRotationQuaternion.toEulerAngles().z * Constants.ACCELERATION);
-            }
-            if (this.controllers.length > 0) {
-                const [heightLeft, heightRight] = this.controllers.map(c => Math.trunc(c.devicePosition.y * Constants.ROTATION_PRECISION) / Constants.ROTATION_PRECISION);
-                if (heightLeft !== heightRight) {
-                    const amount = Math.abs(heightRight - heightLeft);
-                    const directionComponent = heightRight > heightLeft ? 1 : -1;
-                    this.player.rotation.y += amount * -directionComponent * Constants.ROTATION_SENSITIVITY;
-                    this.player.rotation.x = amount * directionComponent;
-                    this.fixRotation();
-                }
-            }
-        } else { // normal PC controls
-            if (this.keysPressed.has(GameKey.Forward)) this.velocity += Constants.ACCELERATION;
-            if (this.keysPressed.has(GameKey.Back)) this.velocity = Math.max(0, this.velocity - Constants.ACCELERATION);
-            if (this.keysPressed.has(GameKey.Left)) this.rotate("left", 0.025);
-            if (this.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
-        }
-        const oldY = this.player.position.y;
-        this.player.translate(BABYLON.Axis.X, this.velocity);
-        this.player.position.y = oldY;
-        this.vr.webVRCamera.position = this.player.position.add(new BABYLON.Vector3(
-            Math.cos(-this.player.rotation.y) * -Constants.PLAYER_SEAT_OFFSET,
-            2,
-            Math.sin(-this.player.rotation.y) * -Constants.PLAYER_SEAT_OFFSET
-        ));
-        // decelerate due to friction
-        this.velocity = Utils.toZero(this.velocity, 0.001);
-        this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
+        this.player.update();
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
@@ -121,21 +75,6 @@ export default class Game {
             case JQuery.Key.D: return GameKey.Right;
             default: return undefined;
         }
-    }
-
-    rotate(direction: "left" | "right", amount: number) {
-        const directionComponent = direction === "left" ? 1 : -1;
-        this.player.rotation.addInPlace(new BABYLON.Vector3(
-            amount * directionComponent,
-            amount * -directionComponent / 2,
-            0
-        ));
-        this.fixRotation();
-    }
-
-    fixRotation() {
-        // avoid tipping over
-        this.player.rotation.x = Math.max(-Constants.MAXIMUM_ROTATION, Math.min(Constants.MAXIMUM_ROTATION, this.player.rotation.x));
     }
 
     importMesh(name: string, dir: string, filename: string): Promise<BABYLON.AbstractMesh[]> {
