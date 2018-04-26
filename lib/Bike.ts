@@ -15,6 +15,7 @@ export default abstract class Bike {
     ];
     trailMesh: BABYLON.Mesh;
     velocity = 0;
+    alive = true;
     abstract get trailColor(): BABYLON.Color3;
 
     constructor(game: Game, mesh: BABYLON.AbstractMesh) {
@@ -89,5 +90,9 @@ export default abstract class Bike {
             0,
             Math.sin(-this.mesh.rotation.y) * amount
         ));
+    }
+
+    protected checkCollision(): boolean {
+        if (this.mesh.intersectsMesh(this.game.bounds) || this.mesh.intersectsMesh(this.game.enemy.trailMesh) || this.mesh.intersectsMesh(this.game.player.trailMesh)) return true;
     }
 }

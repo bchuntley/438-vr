@@ -18,12 +18,18 @@ export default class Game {
     scene: BABYLON.Scene;
     vr: BABYLON.VRExperienceHelper;
     player: Player;
+    active = false;
+    guiText: BABYLON.GUI.TextBlock;
 
     get controllers(): BABYLON.OculusTouchController[] {
         return <any>this.vr.webVRCamera.controllers;
     }
 
     constructor() {
+        this.guiText = new BABYLON.GUI.TextBlock();
+        this.guiText.text = "Press A to begin.";
+        this.guiText.color = "white";
+        this.guiText.fontSize = 48;
         this.canvas = <HTMLCanvasElement>document.getElementById("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
         this.engine.enableOfflineSupport = false;
@@ -36,6 +42,10 @@ export default class Game {
         this.vr.webVRCamera.onControllersAttachedObservable.add(controllers => {
             this.controllers[1].onTriggerStateChangedObservable.add(evt => {
                 this.keysPressed[evt.pressed ? "add" : "delete"](GameKey.Forward);
+            });
+
+            this.controllers[1].onAButtonStateChangedObservable.add(evt => {
+                this.play();
             });
         });
     }
@@ -62,12 +72,17 @@ export default class Game {
             const gameKey = this.convertKey(evt.which);
             if (gameKey === undefined) return;
             this.keysPressed[evt.type === "keydown" ? "add" : "delete"](gameKey);
+            if (!this.active) this.play();
         }).on("resize", () => this.engine.resize());
     }
 
     beforeRender() {
-        this.player.update();
-        this.enemy.update();
+        if (this.active) {
+            if (!this.enemy.alive || !this.player.alive) { this.stop(); return; }
+            this.player.update();
+            this.enemy.update();
+        }
+
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
@@ -86,5 +101,16 @@ export default class Game {
                 resolve(meshes);
             });
         });
+    }
+
+    play() {
+        this.player.hud.texture.removeControl(this.guiText);
+        this.active = true;
+    }
+
+    stop() {
+        this.guiText.text = "Game Over";
+        this.player.hud.texture.addControl(this.guiText);
+        this.active = false;
     }
 }

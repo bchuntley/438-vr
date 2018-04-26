@@ -17,4 +17,9 @@ export default class Enemy extends Bike {
         this.accelerate(Constants.ACCELERATION * 1.1);
         super.update();
     }
+
+    checkCollision(): boolean {
+        if (super.checkCollision()) { this.alive = false; return true; }
+        if (this.mesh.intersectsMesh(this.game.player)) { this.alive = false; return true; }
+    }
 }
