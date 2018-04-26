@@ -2,7 +2,6 @@ import Bike from "./Bike";
 import Constants from "./Constants";
 import GameKey from "./GameKey";
 import Game from "./Game";
-import Utils from "./Utils";
 
 export default class Player extends Bike {
     hud: {
@@ -10,7 +9,6 @@ export default class Player extends Bike {
         mesh?: BABYLON.Mesh;
         velocity?: BABYLON.GUI.TextBlock;
     } = {};
-    velocity = 0;
 
     constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
         super(game, mesh, color);
@@ -48,16 +46,12 @@ export default class Player extends Bike {
             if (this.game.keysPressed.has(GameKey.Left)) this.rotate("left", 0.025);
             if (this.game.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
         }
-        const oldY = this.mesh.position.y;
-        this.mesh.translate(BABYLON.Axis.X, this.velocity);
-        this.mesh.position.y = oldY;
+        super.update();
         this.game.vr.webVRCamera.position = this.mesh.position.add(new BABYLON.Vector3(
             Math.cos(-this.mesh.rotation.y) * -Constants.PLAYER_SEAT_OFFSET,
             2,
             Math.sin(-this.mesh.rotation.y) * -Constants.PLAYER_SEAT_OFFSET
         ));
-        // decelerate due to friction
-        this.velocity = Utils.toZero(this.velocity, 0.001);
         super.update();
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
     }
