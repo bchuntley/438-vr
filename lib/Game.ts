@@ -10,6 +10,7 @@ import "babylonjs-loaders";
 
 export default class Game {
     canvas: HTMLCanvasElement;
+    enemy: Enemy;
     engine: BABYLON.Engine;
     ground: BABYLON.Mesh;
     keysPressed: Set<GameKey> = new Set();
@@ -46,8 +47,8 @@ export default class Game {
         ]);
         this.player = new Player(this, playerMeshes[0]);
         this.player.mesh.position = new BABYLON.Vector3(0, 1, 0);
-        Enemy.baseMesh = enemyMeshes[0];
-        Enemy.baseMesh.isVisible = false;
+        this.enemy = new Enemy(this, enemyMeshes[0]);
+        this.enemy.mesh.position = new BABYLON.Vector3(32, 1, 32);
         this.ground = BABYLON.MeshBuilder.CreateGround("ground", {
             width: 128,
             height: 128
