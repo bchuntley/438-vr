@@ -14,7 +14,7 @@ export default class Bike {
     ];
     trailMesh: BABYLON.Mesh;
 
-    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
+    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
         this.id = ++Bike.lastId;
         this.game = game;
         this.mesh = mesh;
@@ -28,7 +28,7 @@ export default class Bike {
         }, this.game.scene);
         const trailMaterial = new BABYLON.StandardMaterial("trail" + this.id, this.game.scene);
         trailMaterial.alpha = 0.75;
-        trailMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1);
+        trailMaterial.diffuseColor = color;
         trailMaterial.backFaceCulling = false;
         this.trailMesh.material = trailMaterial;
     }
@@ -68,4 +68,10 @@ export default class Bike {
             Math.sin(-this.mesh.rotation.y) * -4
         ));
     }
+
+    update() {
+        this.prepareTrail();
+    }
+
+
 }

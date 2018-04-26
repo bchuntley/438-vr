@@ -12,8 +12,8 @@ export default class Player extends Bike {
     } = {};
     velocity = 0;
 
-    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
-        super(game, mesh);
+    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
+        super(game, mesh, color);
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.game.scene);
@@ -58,7 +58,7 @@ export default class Player extends Bike {
         ));
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
-        this.prepareTrail();
+        super.update();
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
     }
 }
