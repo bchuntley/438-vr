@@ -1,5 +1,6 @@
 import Constants from "./Constants";
 import Game from "./Game";
+import Utils from "./Utils";
 import _ from "lodash";
 
 export default class Bike {
@@ -13,6 +14,7 @@ export default class Bike {
         _.range(200).map(() => new BABYLON.Vector3(0, 0, 0))
     ];
     trailMesh: BABYLON.Mesh;
+    velocity = 0;
 
     constructor(game: Game, mesh: BABYLON.AbstractMesh) {
         this.id = ++Bike.lastId;
@@ -31,6 +33,14 @@ export default class Bike {
         trailMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1);
         trailMaterial.backFaceCulling = false;
         this.trailMesh.material = trailMaterial;
+    }
+
+    update() {
+        const oldY = this.mesh.position.y;
+        this.mesh.translate(BABYLON.Axis.X, this.velocity);
+        this.mesh.position.y = oldY;
+        // decelerate due to friction
+        this.velocity = Utils.toZero(this.velocity, 0.001);
     }
 
     rotate(direction: "left" | "right", amount: number) {
