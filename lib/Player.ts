@@ -58,6 +58,7 @@ export default class Player extends Bike {
         ));
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
+        this.prepareTrail();
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
     }
 }
