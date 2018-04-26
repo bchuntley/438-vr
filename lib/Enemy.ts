@@ -1,14 +1,12 @@
+import Bike from "./Bike";
 import Game from "./Game";
 
-export default class Enemy {
-    static lastId = 0;
+export default class Enemy extends Bike {
     static baseMesh: BABYLON.AbstractMesh;
-    game: Game;
     mesh: BABYLON.InstancedMesh;
 
     constructor(game: Game) {
-        this.game = game;
-        this.mesh = new BABYLON.InstancedMesh("enemy" + ++Enemy.lastId, <any>Enemy.baseMesh);
+        super(game, new BABYLON.InstancedMesh("enemy" + (Bike.lastId + 1), <any>Enemy.baseMesh));
         this.mesh.isVisible = true;
     }
 }

@@ -1,21 +1,19 @@
+import Bike from "./Bike";
 import Constants from "./Constants";
 import GameKey from "./GameKey";
 import Game from "./Game";
 import Utils from "./Utils";
 
-export default class Player {
-    game: Game;
+export default class Player extends Bike {
     hud: {
         texture?: BABYLON.GUI.AdvancedDynamicTexture;
         mesh?: BABYLON.Mesh;
         velocity?: BABYLON.GUI.TextBlock;
     } = {};
-    mesh: BABYLON.AbstractMesh;
     velocity = 0;
 
     constructor(game: Game, mesh: BABYLON.AbstractMesh) {
-        this.game = game;
-        this.mesh = mesh;
+        super(game, mesh);
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.game.scene);
@@ -61,20 +59,5 @@ export default class Player {
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
-    }
-
-    rotate(direction: "left" | "right", amount: number) {
-        const directionComponent = direction === "left" ? 1 : -1;
-        this.mesh.rotation.addInPlace(new BABYLON.Vector3(
-            amount * directionComponent,
-            amount * -directionComponent / 2,
-            0
-        ));
-        this.fixRotation();
-    }
-
-    fixRotation() {
-        // avoid tipping over
-        this.mesh.rotation.x = Math.max(-Constants.MAXIMUM_ROTATION, Math.min(Constants.MAXIMUM_ROTATION, this.mesh.rotation.x));
     }
 }
