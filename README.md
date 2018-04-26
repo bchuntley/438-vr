@@ -1,6 +1,6 @@
 # TRON-VR
 
-#### See it in action! ####  https://www.youtube.com/watch?v=B1_RzO_Boyo&feature=youtu.be
+#### See it in action!  https://www.youtube.com/watch?v=B1_RzO_Boyo&feature=youtu.be
 
 - TRON-VR is a web-based vr implementation of the lightcycles from TRON. Currently, you race against a fellow bike to see who can eliminate the other one first.
 
