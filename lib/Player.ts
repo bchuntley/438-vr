@@ -9,9 +9,10 @@ export default class Player extends Bike {
         mesh?: BABYLON.Mesh;
         velocity?: BABYLON.GUI.TextBlock;
     } = {};
+    get trailColor() { return BABYLON.Color3.Blue(); }
 
-    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
-        super(game, mesh, color);
+    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
+        super(game, mesh);
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.game.scene);
@@ -53,12 +54,13 @@ export default class Player extends Bike {
             2,
             Math.sin(-this.mesh.rotation.y) * -Constants.PLAYER_SEAT_OFFSET
         ));
-        super.update();
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
     }
 
     checkCollision() {
-        if (super.checkCollision()) { this.alive = false; return true; }
-        if (this.mesh.intersectsMesh(this.game.enemy)) { this.alive = false; return true; }
+        super.checkCollision();
+        return this.mesh.intersectsMesh(this.game.enemy.mesh)
+            // || this.mesh.intersectsMesh(this.game.enemy.trailMesh, true);
+            || this.intersectsTrail(this.game.enemy);
     }
 }

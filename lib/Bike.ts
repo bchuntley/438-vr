@@ -10,8 +10,8 @@ export default abstract class Bike {
     mesh: BABYLON.AbstractMesh;
     /** 0 is bottom points, 1 is top points */
     trail: BABYLON.Vector3[][] = [
-        _.range(200).map(() => new BABYLON.Vector3(0, 0, 0)),
-        _.range(200).map(() => new BABYLON.Vector3(0, 0, 0))
+        _.range(500).map(() => new BABYLON.Vector3(NaN, NaN, NaN)),
+        _.range(500).map(() => new BABYLON.Vector3(NaN, NaN, NaN))
     ];
     trailMesh: BABYLON.Mesh;
     velocity = 0;
@@ -44,6 +44,7 @@ export default abstract class Bike {
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
         this.prepareTrail();
+        if (this.checkCollision()) this.game.stop();
     }
 
     normalRotation() {
@@ -74,14 +75,16 @@ export default abstract class Bike {
     prepareTrail() {
         const lastPoint = this.trail[0][this.trail[0].length - 1];
         const trailPoint = this.getTireOffset(-4);
-        if (Math.abs(BABYLON.Vector3.Distance(trailPoint, lastPoint)) < 0.25) return;
+        if (Math.abs(BABYLON.Vector3.Distance(trailPoint, lastPoint)) < 0.01) return;
         this.trail.forEach(t => t.splice(0, 1));
         this.trail[0].push(trailPoint.add(new BABYLON.Vector3(0, -1, 0)));
         this.trail[1].push(trailPoint.add(new BABYLON.Vector3(0, 1, 0)));
+        const oldTrailMesh = this.trailMesh;
         this.trailMesh = BABYLON.MeshBuilder.CreateRibbon("trail" + this.id, {
             pathArray: this.trail,
-            instance: this.trailMesh
+            instance: this.trailMesh.clone("trail" + this.id)
         }, this.game.scene);
+        oldTrailMesh.dispose(true, false);
     }
 
     getTireOffset(amount: number) {
@@ -93,6 +96,10 @@ export default abstract class Bike {
     }
 
     protected checkCollision(): boolean {
-        if (this.mesh.intersectsMesh(this.game.bounds) || this.mesh.intersectsMesh(this.game.enemy.trailMesh) || this.mesh.intersectsMesh(this.game.player.trailMesh)) return true;
+        return false;
+    }
+
+    intersectsTrail(other: Bike): boolean {
+        return other.trail[1].some(v => this.mesh.intersectsPoint(v) && !isNaN(v.x));
     }
 }

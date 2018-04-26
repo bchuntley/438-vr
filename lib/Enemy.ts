@@ -14,12 +14,14 @@ export default class Enemy extends Bike {
         const target = this.game.player.getTireOffset(1).subtract(this.mesh.position);
         const angle = -Math.atan2(target.z, target.x) - Math.PI / 2;
         this.mesh.rotation.y = angle;
-        this.accelerate(Constants.ACCELERATION * 1.1);
+        this.accelerate(Constants.ACCELERATION);
         super.update();
     }
 
-    checkCollision(): boolean {
-        if (super.checkCollision()) { this.alive = false; return true; }
-        if (this.mesh.intersectsMesh(this.game.player)) { this.alive = false; return true; }
+    checkCollision() {
+        super.checkCollision();
+        return this.mesh.intersectsMesh(this.game.player.mesh)
+            // || this.mesh.intersectsMesh(this.game.player.trailMesh, true);
+            || this.intersectsTrail(this.game.player);
     }
 }

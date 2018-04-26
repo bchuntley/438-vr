@@ -19,6 +19,7 @@ export default class Game {
     vr: BABYLON.VRExperienceHelper;
     player: Player;
     active = false;
+    hasStarted = false;
     guiText: BABYLON.GUI.TextBlock;
 
     get controllers(): BABYLON.OculusTouchController[] {
@@ -27,9 +28,9 @@ export default class Game {
 
     constructor() {
         this.guiText = new BABYLON.GUI.TextBlock();
-        this.guiText.text = "Press A to begin.";
+        this.guiText.text = "Press the trigger to begin.";
         this.guiText.color = "white";
-        this.guiText.fontSize = 48;
+        this.guiText.fontSize = "128px";
         this.canvas = <HTMLCanvasElement>document.getElementById("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
         this.engine.enableOfflineSupport = false;
@@ -42,10 +43,10 @@ export default class Game {
         this.vr.webVRCamera.onControllersAttachedObservable.add(controllers => {
             this.controllers[1].onTriggerStateChangedObservable.add(evt => {
                 this.keysPressed[evt.pressed ? "add" : "delete"](GameKey.Forward);
-            });
-
-            this.controllers[1].onAButtonStateChangedObservable.add(evt => {
-                this.play();
+                if (!this.hasStarted) {
+                    this.hasStarted = true;
+                    this.play();
+                }
             });
         });
     }
@@ -59,7 +60,7 @@ export default class Game {
             this.importMesh("BoundingWalls", "models/", "floor.babylon")
         ]);
         this.player = new Player(this, playerMeshes[0]);
-        this.player.mesh.position = new BABYLON.Vector3(0, 1, 0);
+        this.player.mesh.position = new BABYLON.Vector3(-32, 1, -32);
         this.enemy = new Enemy(this, enemyMeshes[0]);
         this.enemy.mesh.position = new BABYLON.Vector3(32, 1, 32);
         this.ground = groundMeshes[0];
@@ -82,7 +83,6 @@ export default class Game {
             this.player.update();
             this.enemy.update();
         }
-
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
@@ -104,13 +104,13 @@ export default class Game {
     }
 
     play() {
-        this.player.hud.texture.removeControl(this.guiText);
+        this.player.hud.texture!.removeControl(this.guiText);
         this.active = true;
     }
 
     stop() {
         this.guiText.text = "Game Over";
-        this.player.hud.texture.addControl(this.guiText);
+        this.player.hud.texture!.addControl(this.guiText);
         this.active = false;
     }
 }
