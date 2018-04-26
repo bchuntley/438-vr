@@ -9,9 +9,10 @@ export default class Player extends Bike {
         mesh?: BABYLON.Mesh;
         velocity?: BABYLON.GUI.TextBlock;
     } = {};
+    get trailColor() { return BABYLON.Color3.Blue(); }
 
-    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
-        super(game, mesh, color);
+    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
+        super(game, mesh);
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.game.scene);
@@ -28,7 +29,7 @@ export default class Player extends Bike {
     update() {
         if (this.game.vr.isInVRMode) {
             if (this.game.keysPressed.has(GameKey.Forward)) {
-                this.velocity = Math.max(0, this.velocity + this.game.controllers[1].deviceRotationQuaternion.toEulerAngles().z * Constants.ACCELERATION);
+                this.accelerate(this.game.controllers[1].deviceRotationQuaternion.toEulerAngles().z * Constants.ACCELERATION);
             }
             if (this.game.controllers.length > 0) {
                 const [heightLeft, heightRight] = this.game.controllers.map(c => Math.trunc(c.devicePosition.y * Constants.ROTATION_PRECISION) / Constants.ROTATION_PRECISION);
@@ -41,10 +42,10 @@ export default class Player extends Bike {
                 }
             }
         } else { // normal PC controls
-            if (this.game.keysPressed.has(GameKey.Forward)) this.velocity += Constants.ACCELERATION;
-            if (this.game.keysPressed.has(GameKey.Back)) this.velocity = Math.max(0, this.velocity - Constants.ACCELERATION);
-            if (this.game.keysPressed.has(GameKey.Left)) this.rotate("left", 0.025);
-            if (this.game.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
+            if (this.game.keysPressed.has(GameKey.Forward)) this.accelerate(Constants.ACCELERATION);
+            if (this.game.keysPressed.has(GameKey.Back)) this.accelerate(-Constants.ACCELERATION);
+            if (this.game.keysPressed.has(GameKey.Left)) this.rotate("left", 0.05);
+            if (this.game.keysPressed.has(GameKey.Right)) this.rotate("right", 0.05);
         }
         super.update();
         this.game.vr.webVRCamera.position = this.mesh.position.add(new BABYLON.Vector3(
@@ -52,7 +53,6 @@ export default class Player extends Bike {
             2,
             Math.sin(-this.mesh.rotation.y) * -Constants.PLAYER_SEAT_OFFSET
         ));
-        super.update();
         this.hud.velocity!.text = `Velocity: ${this.velocity.toFixed(2)} m/s`;
     }
 }

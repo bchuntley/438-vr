@@ -3,7 +3,7 @@ import Game from "./Game";
 import Utils from "./Utils";
 import _ from "lodash";
 
-export default class Bike {
+export default abstract class Bike {
     static lastId = 0;
     game: Game;
     id: number;
@@ -15,8 +15,9 @@ export default class Bike {
     ];
     trailMesh: BABYLON.Mesh;
     velocity = 0;
+    abstract get trailColor(): BABYLON.Color3;
 
-    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
+    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
         this.id = ++Bike.lastId;
         this.game = game;
         this.mesh = mesh;
@@ -30,7 +31,7 @@ export default class Bike {
         }, this.game.scene);
         const trailMaterial = new BABYLON.StandardMaterial("trail" + this.id, this.game.scene);
         trailMaterial.alpha = 0.75;
-        trailMaterial.diffuseColor = color;
+        trailMaterial.diffuseColor = this.trailColor;
         trailMaterial.backFaceCulling = false;
         this.trailMesh.material = trailMaterial;
     }
@@ -41,6 +42,17 @@ export default class Bike {
         this.mesh.position.y = oldY;
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
+        this.prepareTrail();
+    }
+
+    normalRotation() {
+        let degrees = (this.mesh.rotation.y * 180 / Math.PI) % 360;
+        if (degrees < 0) degrees += 360;
+        return degrees * Math.PI / 180;
+    }
+
+    accelerate(amount: number) {
+        this.velocity = Math.max(0, Math.min(Constants.MAXIMUM_VELOCITY, this.velocity + amount));
     }
 
     rotate(direction: "left" | "right", amount: number) {
@@ -60,7 +72,7 @@ export default class Bike {
 
     prepareTrail() {
         const lastPoint = this.trail[0][this.trail[0].length - 1];
-        const trailPoint = this.getTireOffset();
+        const trailPoint = this.getTireOffset(-4);
         if (Math.abs(BABYLON.Vector3.Distance(trailPoint, lastPoint)) < 0.25) return;
         this.trail.forEach(t => t.splice(0, 1));
         this.trail[0].push(trailPoint.add(new BABYLON.Vector3(0, -1, 0)));
@@ -71,17 +83,11 @@ export default class Bike {
         }, this.game.scene);
     }
 
-    protected getTireOffset() {
+    getTireOffset(amount: number) {
         return this.mesh.position.add(new BABYLON.Vector3(
-            Math.cos(-this.mesh.rotation.y) * -4,
+            Math.cos(-this.mesh.rotation.y) * amount,
             0,
-            Math.sin(-this.mesh.rotation.y) * -4
+            Math.sin(-this.mesh.rotation.y) * amount
         ));
     }
-
-    update() {
-        this.prepareTrail();
-    }
-
-
 }

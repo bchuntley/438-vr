@@ -1,8 +1,20 @@
 import Bike from "./Bike";
+import Constants from "./Constants";
 import Game from "./Game";
+import Utils from "./Utils";
 
 export default class Enemy extends Bike {
-    constructor(game: Game, mesh: BABYLON.AbstractMesh, color: BABYLON.Color3) {
-        super(game, mesh, color);
+    get trailColor() { return BABYLON.Color3.Red(); }
+
+    constructor(game: Game, mesh: BABYLON.AbstractMesh) {
+        super(game, mesh);
+    }
+
+    update() {
+        const target = this.game.player.getTireOffset(1).subtract(this.mesh.position);
+        const angle = -Math.atan2(target.z, target.x) - Math.PI / 2;
+        this.mesh.rotation.y = angle;
+        this.accelerate(Constants.ACCELERATION * 1.1);
+        super.update();
     }
 }

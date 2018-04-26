@@ -42,16 +42,18 @@ export default class Game {
 
     async init() {
         new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), this.scene);
-        const [playerMeshes, enemyMeshes] = await Promise.all([
+        const [playerMeshes, enemyMeshes, groundMeshes, wallMeshes] = await Promise.all([
             this.importMesh("Cube", "models/", "player.babylon"),
-            this.importMesh("Enemy", "models/", "enemy.babylon")
+            this.importMesh("Enemy", "models/", "enemy.babylon"),
+            this.importMesh("FloorMap", "models/", "floor.babylon"),
+            this.importMesh("BoundingWalls", "models/", "floor.babylon")
         ]);
-        this.player = new Player(this, playerMeshes[0], new BABYLON.Color3(0, 0, 1));
+        this.player = new Player(this, playerMeshes[0]);
         this.player.mesh.position = new BABYLON.Vector3(0, 1, 0);
-        this.enemy = new Enemy(this, enemyMeshes[0], new BABYLON.Color3(1, 0, 0));
+        this.enemy = new Enemy(this, enemyMeshes[0]);
         this.enemy.mesh.position = new BABYLON.Vector3(32, 1, 32);
-        this.ground = await this.importMesh("FloorMap", "models/", "floor.babylon");
-        this.walls = await this.importMesh("BoundingWalls", "models/", "floor.babylon");
+        this.ground = groundMeshes[0];
+        this.bounds = wallMeshes[0];
     }
 
     start() {
@@ -65,6 +67,7 @@ export default class Game {
 
     beforeRender() {
         this.player.update();
+        this.enemy.update();
     }
 
     convertKey(key: JQuery.Key): GameKey | undefined {
