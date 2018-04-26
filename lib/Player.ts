@@ -13,6 +13,7 @@ export default class Player extends Bike {
 
     constructor(game: Game, mesh: BABYLON.AbstractMesh) {
         super(game, mesh);
+        // velocity HUD on bike
         this.hud.mesh = BABYLON.MeshBuilder.CreatePlane("hud", {
             size: 2
         }, this.game.scene);
@@ -33,6 +34,7 @@ export default class Player extends Bike {
                 this.velocity = Math.max(0, this.velocity + this.game.controllers[1].deviceRotationQuaternion.toEulerAngles().z * Constants.ACCELERATION);
             }
             if (this.game.controllers.length > 0) {
+                // rotate based on controller height difference
                 const [heightLeft, heightRight] = this.game.controllers.map(c => Math.trunc(c.devicePosition.y * Constants.ROTATION_PRECISION) / Constants.ROTATION_PRECISION);
                 if (heightLeft !== heightRight) {
                     const amount = Math.abs(heightRight - heightLeft);
@@ -49,6 +51,7 @@ export default class Player extends Bike {
             if (this.game.keysPressed.has(GameKey.Right)) this.rotate("right", 0.025);
         }
         super.update();
+        // manually force VR camera to follow bike (setting parent doesn't work)
         this.game.vr.webVRCamera.position = this.mesh.position.add(new BABYLON.Vector3(
             Math.cos(-this.mesh.rotation.y) * -Constants.PLAYER_SEAT_OFFSET,
             2,
@@ -58,9 +61,7 @@ export default class Player extends Bike {
     }
 
     checkCollision() {
-        super.checkCollision();
         return this.mesh.intersectsMesh(this.game.enemy.mesh)
-            // || this.mesh.intersectsMesh(this.game.enemy.trailMesh, true);
             || this.intersectsTrail(this.game.enemy);
     }
 }

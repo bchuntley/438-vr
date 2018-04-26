@@ -27,19 +27,16 @@ export default class Game {
     }
 
     constructor() {
-        this.guiText = new BABYLON.GUI.TextBlock();
-        this.guiText.text = "Press the trigger to begin.";
-        this.guiText.color = "white";
-        this.guiText.fontSize = "128px";
         this.canvas = <HTMLCanvasElement>document.getElementById("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
-        this.engine.enableOfflineSupport = false;
+        this.engine.enableOfflineSupport = false; // necessary for localhost model loading
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.onBeforeRenderObservable.add(this.beforeRender.bind(this));
         this.vr = this.scene.createDefaultVRExperience({
             controllerMeshes: true
         });
         this.vr.enableInteractions();
+        // handle trigger press
         this.vr.webVRCamera.onControllersAttachedObservable.add(controllers => {
             this.controllers[1].onTriggerStateChangedObservable.add(evt => {
                 this.keysPressed[evt.pressed ? "add" : "delete"](GameKey.Forward);
@@ -49,10 +46,16 @@ export default class Game {
                 }
             });
         });
+        // start / end text
+        this.guiText = new BABYLON.GUI.TextBlock();
+        this.guiText.text = "Press the trigger to begin.";
+        this.guiText.color = "white";
+        this.guiText.fontSize = "128px";
     }
 
     async init() {
         new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), this.scene);
+        // load all models and meshes
         const [playerMeshes, enemyMeshes, groundMeshes, wallMeshes] = await Promise.all([
             this.importMesh("Cube", "models/", "player.babylon"),
             this.importMesh("Enemy", "models/", "enemy.babylon"),
@@ -69,7 +72,7 @@ export default class Game {
 
     start() {
         this.engine.runRenderLoop(() => this.scene.render());
-        $(window).on("keydown keyup", evt => {
+        $(window).on("keydown keyup", evt => { // handle PC key events (WASD)
             const gameKey = this.convertKey(evt.which);
             if (gameKey === undefined) return;
             this.keysPressed[evt.type === "keydown" ? "add" : "delete"](gameKey);
@@ -77,14 +80,14 @@ export default class Game {
         }).on("resize", () => this.engine.resize());
     }
 
-    beforeRender() {
-        if (this.active) {
-            if (!this.enemy.alive || !this.player.alive) { this.stop(); return; }
-            this.player.update();
-            this.enemy.update();
-        }
+    beforeRender() { // called every tick
+        if (!this.active) return;
+        if (!this.enemy.alive || !this.player.alive) return this.stop();
+        this.player.update();
+        this.enemy.update();
     }
 
+    /** converts from JQuery key to GameKey */
     convertKey(key: JQuery.Key): GameKey | undefined {
         switch (key) {
             case JQuery.Key.W: return GameKey.Forward;
@@ -95,6 +98,7 @@ export default class Game {
         }
     }
 
+    /** promisification of SceneLoader.ImportMesh */
     importMesh(name: string, dir: string, filename: string): Promise<BABYLON.AbstractMesh[]> {
         return new Promise(resolve => {
             BABYLON.SceneLoader.ImportMesh(name, dir, filename, this.scene, meshes => {

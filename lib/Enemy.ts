@@ -11,17 +11,16 @@ export default class Enemy extends Bike {
     }
 
     update() {
+        // target just in front of the player
         const target = this.game.player.getTireOffset(1).subtract(this.mesh.position);
         const angle = -Math.atan2(target.z, target.x) - Math.PI / 2;
-        this.mesh.rotation.y = angle;
+        this.mesh.rotation.y = angle; // rotate towards player
         this.accelerate(Constants.ACCELERATION);
         super.update();
     }
 
     checkCollision() {
-        super.checkCollision();
         return this.mesh.intersectsMesh(this.game.player.mesh)
-            // || this.mesh.intersectsMesh(this.game.player.trailMesh, true);
             || this.intersectsTrail(this.game.player);
     }
 }

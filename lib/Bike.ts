@@ -10,6 +10,7 @@ export default abstract class Bike {
     mesh: BABYLON.AbstractMesh;
     /** 0 is bottom points, 1 is top points */
     trail: BABYLON.Vector3[][] = [
+        // trail mesh can't update with different pointarray lengths
         _.range(500).map(() => new BABYLON.Vector3(NaN, NaN, NaN)),
         _.range(500).map(() => new BABYLON.Vector3(NaN, NaN, NaN))
     ];
@@ -38,19 +39,13 @@ export default abstract class Bike {
     }
 
     update() {
-        const oldY = this.mesh.position.y;
+        const oldY = this.mesh.position.y; // correct Y axis
         this.mesh.translate(BABYLON.Axis.X, this.velocity);
         this.mesh.position.y = oldY;
         // decelerate due to friction
         this.velocity = Utils.toZero(this.velocity, 0.001);
         this.prepareTrail();
         if (this.checkCollision()) this.game.stop();
-    }
-
-    normalRotation() {
-        let degrees = (this.mesh.rotation.y * 180 / Math.PI) % 360;
-        if (degrees < 0) degrees += 360;
-        return degrees * Math.PI / 180;
     }
 
     accelerate(amount: number) {
@@ -74,9 +69,9 @@ export default abstract class Bike {
 
     prepareTrail() {
         const lastPoint = this.trail[0][this.trail[0].length - 1];
-        const trailPoint = this.getTireOffset(-4);
+        const trailPoint = this.getTireOffset(-4); // 4 behind the front tire
         if (Math.abs(BABYLON.Vector3.Distance(trailPoint, lastPoint)) < 0.01) return;
-        this.trail.forEach(t => t.splice(0, 1));
+        this.trail.forEach(t => t.splice(0, 1)); // remove first element of each trail point array
         this.trail[0].push(trailPoint.add(new BABYLON.Vector3(0, -1, 0)));
         this.trail[1].push(trailPoint.add(new BABYLON.Vector3(0, 1, 0)));
         const oldTrailMesh = this.trailMesh;
@@ -87,6 +82,7 @@ export default abstract class Bike {
         oldTrailMesh.dispose(true, false);
     }
 
+    /** returns a position offset from the front tire along the body of the bike */
     getTireOffset(amount: number) {
         return this.mesh.position.add(new BABYLON.Vector3(
             Math.cos(-this.mesh.rotation.y) * amount,
@@ -95,9 +91,7 @@ export default abstract class Bike {
         ));
     }
 
-    protected checkCollision(): boolean {
-        return false;
-    }
+    protected abstract checkCollision(): boolean;
 
     intersectsTrail(other: Bike): boolean {
         return other.trail[1].some(v => this.mesh.intersectsPoint(v) && !isNaN(v.x));
